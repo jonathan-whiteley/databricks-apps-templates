@@ -11,7 +11,7 @@ import { getHostUrl, getHostDomain } from '@chat-template/utils';
 // Types
 // ============================================================================
 
-export type AuthMethod = 'oauth' | 'cli' | 'none';
+export type AuthMethod = 'obo' | 'oauth' | 'cli' | 'none';
 export type UserType = 'regular'; // Simplified - no more guest users
 
 export interface AuthUser {
@@ -24,6 +24,7 @@ export interface AuthUser {
 
 export interface AuthSession {
   user: AuthUser;
+  accessToken?: string; // User's access token for OBO authentication
 }
 
 export interface ClientSession {
@@ -61,6 +62,8 @@ let cacheExpiry = 0;
 
 /**
  * Determine which authentication method to use
+ * Note: OBO authentication is checked at request time via getAuthSession
+ * This function only checks for static/environment-based auth methods
  */
 export function getAuthMethod(): AuthMethod {
   // Check for OAuth (service principal) credentials
@@ -165,8 +168,6 @@ export async function getDatabricksOAuthToken(): Promise<string> {
 
   const tokenUrl = `${hostUrl.replace(/\/$/, '')}/oidc/v1/token`;
   const body = 'grant_type=client_credentials&scope=all-apis';
-
-  console.log('Buffer', Buffer);
 
   const response = await fetch(tokenUrl, {
     method: 'POST',
@@ -386,6 +387,25 @@ export async function getDatabricksToken(): Promise<string> {
 }
 
 /**
+ * Get a token for API calls, prioritizing OBO token from session if available
+ * @param session - Optional session containing OBO access token
+ * @returns Access token to use for API calls
+ */
+export async function getDatabricksTokenForRequest(
+  session?: AuthSession | null,
+): Promise<string> {
+  // If we have an OBO token in the session, use it
+  if (session?.accessToken) {
+    console.log('[getDatabricksTokenForRequest] Using OBO access token from session');
+    return session.accessToken;
+  }
+
+  // Otherwise fall back to service principal or CLI auth
+  console.log('[getDatabricksTokenForRequest] No OBO token, falling back to service principal/CLI auth');
+  return getDatabricksToken();
+}
+
+/**
  * Get the database username based on the authentication method
  * For OAuth (service principal): use PGUSER environment variable
  * For CLI auth (user): use the current user's identity
@@ -519,6 +539,9 @@ export async function getAuthSession({
   getRequestHeader: (name: string) => string | null;
 }): Promise<AuthSession | null> {
   try {
+    // Extract OBO access token if present
+    const oboAccessToken = getRequestHeader('X-Forwarded-Access-Token');
+
     // In test environments, short-circuit auth using forwarded headers or defaults
     if (isTestEnvironment) {
       const fwdUser = getRequestHeader('X-Forwarded-User') ?? 'test-user-id';
@@ -544,12 +567,18 @@ export async function getAuthSession({
           preferredUsername: fwdName,
           type: 'regular',
         },
+        accessToken: oboAccessToken || undefined,
       };
     }
 
     // Check for Databricks Apps headers (production)
     if (getRequestHeader('X-Forwarded-User')) {
       console.log('[getAuthSession] Using Databricks Apps headers');
+      if (oboAccessToken) {
+        console.log('[getAuthSession] OBO authentication enabled - using user access token');
+      } else {
+        console.log('[getAuthSession] No OBO token found - will fall back to service principal');
+      }
 
       const forwardedUser = getRequestHeader('X-Forwarded-User');
       const forwardedEmail = getRequestHeader('X-Forwarded-Email');
@@ -568,6 +597,7 @@ export async function getAuthSession({
           preferredUsername: forwardedPreferredUsername || undefined,
           type: 'regular',
         },
+        accessToken: oboAccessToken || undefined,
       };
     }
 
@@ -600,6 +630,7 @@ export async function getAuthSession({
         preferredUsername: scimUser.userName,
         type: 'regular',
       },
+      accessToken: oboAccessToken || undefined,
     };
   } catch (error) {
     console.error('[getAuthSession] Failed to get session:', error);
