@@ -1,14 +1,14 @@
 bundle:
   name: genie-e2e-app
 
-# ⚠️ UPDATE THESE with your own
+# ⚠️ UPDATE THESE
 variables:
   serving_endpoint_name:
     description: "Name of the model serving endpoint to be used by the app"
-    default: "mas-cfcbc058-endpoint"
+    default: "mas-06a73aba-endpoint"
   genie_space_id:
     description: "Space ID of the Genie space to be used by the app"
-    default: "01f0aae3f2a812ceb9f489fa0317532a"
+    default: "01f0aabba63a1803b37ff594a8a4b01e"
   database_instance_name:
     description: "Base name of the Lakebase database instance"
     default: "lakebase-e2e"
@@ -29,8 +29,6 @@ resources:
       name: genie-e2e-app-${var.resource_name_suffix}
       description: "Agentic Chat application for Genie Space"
       source_code_path: .
-      user_api_scopes:
-        - serving.serving-endpoints
       resources:
         - name: serving-endpoint
           description: "Databricks serving endpoint name for the AI agent"
