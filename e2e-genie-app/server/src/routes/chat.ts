@@ -109,7 +109,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     if (!chat) {
       // Only create new chat if we have a message (not a continuation)
       if (isDatabaseAvailable() && message) {
-        const title = await generateTitleFromUserMessage({ message });
+        const title = await generateTitleFromUserMessage({ message, session });
 
         await saveChat({
           id,
@@ -205,7 +205,8 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     let finalUsage: LanguageModelUsage | undefined;
     const streamId = generateUUID();
 
-    const model = await myProvider.languageModel(selectedChatModel);
+    // Pass session to provider for OBO authentication
+    const model = await myProvider.languageModel(selectedChatModel, session);
     const result = streamText({
       model,
       messages: convertToModelMessages(uiMessages),
@@ -411,7 +412,7 @@ chatRouter.get(
 chatRouter.post('/title', requireAuth, async (req: Request, res: Response) => {
   try {
     const { message } = req.body;
-    const title = await generateTitleFromUserMessage({ message });
+    const title = await generateTitleFromUserMessage({ message, session: req.session });
     res.json({ title });
   } catch (error) {
     console.error('Error generating title:', error);
@@ -446,10 +447,12 @@ chatRouter.patch(
 // Helper function to generate title from user message
 async function generateTitleFromUserMessage({
   message,
+  session,
 }: {
   message: ChatMessage;
+  session?: { user: { id: string; email: string }; accessToken?: string } | null;
 }) {
-  const model = await myProvider.languageModel('title-model');
+  const model = await myProvider.languageModel('title-model', session);
   const { text: title } = await generateText({
     model,
     system: `\n
