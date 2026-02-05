@@ -1,7 +1,7 @@
 bundle:
   name: genie-e2e-app
 
-# ⚠️ UPDATE THESE
+# ⚠️ UPDATE THESE with your own
 variables:
   serving_endpoint_name:
     description: "Name of the model serving endpoint to be used by the app"
@@ -29,6 +29,8 @@ resources:
       name: genie-e2e-app-${var.resource_name_suffix}
       description: "Agentic Chat application for Genie Space"
       source_code_path: .
+      user_api_scopes:
+        - serving.serving-endpoints
       resources:
         - name: serving-endpoint
           description: "Databricks serving endpoint name for the AI agent"

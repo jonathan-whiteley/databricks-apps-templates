@@ -4,6 +4,7 @@
  */
 
 import type { OAuthAwareProvider } from '@chat-template/ai-sdk-providers';
+import type { AuthSession } from '@chat-template/auth';
 
 // For server-side usage, get the authenticated provider
 async function getServerProvider() {
@@ -19,12 +20,12 @@ let cachedServerProvider: OAuthAwareProvider | null = null;
 // Export the main provider for server-side usage
 
 export const myProvider = {
-  // Server-side: use smart provider that handles OAuth
-  async languageModel(id: string) {
+  // Server-side: use smart provider that handles OAuth and OBO
+  async languageModel(id: string, session?: AuthSession | null) {
     // Only call getServerProvider when actually needed (not during module init)
     if (!cachedServerProvider) {
       cachedServerProvider = await getServerProvider();
     }
-    return await cachedServerProvider.languageModel(id);
+    return await cachedServerProvider.languageModel(id, session);
   },
 };

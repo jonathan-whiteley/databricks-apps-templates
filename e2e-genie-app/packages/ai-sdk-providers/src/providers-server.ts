@@ -4,23 +4,25 @@ import { getHostUrl } from '@chat-template/utils';
 // Import auth module directly
 import {
   getDatabricksToken,
+  getDatabricksTokenForRequest,
   getAuthMethod,
   getDatabricksUserIdentity,
   getCachedCliHost,
+  type AuthSession,
 } from '@chat-template/auth';
 import { createDatabricksProvider } from './databricks-provider/index';
 import { extractReasoningMiddleware, wrapLanguageModel } from 'ai';
 
 // Use centralized authentication - only on server side
-async function getProviderToken(): Promise<string> {
+async function getProviderToken(session?: AuthSession | null): Promise<string> {
   // First, check if we have a PAT token
   if (process.env.DATABRICKS_TOKEN) {
     console.log('Using PAT token from DATABRICKS_TOKEN env var');
     return process.env.DATABRICKS_TOKEN;
   }
 
-  // Otherwise, use centralized authentication module
-  return getDatabricksToken();
+  // Use the new function that prioritizes OBO token from session
+  return getDatabricksTokenForRequest(session);
 }
 
 // Cache the workspace hostname once resolved
@@ -164,9 +166,15 @@ const PROVIDER_CACHE_DURATION = 5 * 60 * 1000; // Cache provider for 5 minutes
 const API_PROXY = process.env.API_PROXY;
 
 // Helper function to get or create the Databricks provider with OAuth
-async function getOrCreateDatabricksProvider(): Promise<CachedProvider> {
-  // Check if we have a cached provider that's still fresh
+async function getOrCreateDatabricksProvider(
+  session?: AuthSession | null,
+): Promise<CachedProvider> {
+  // For OBO authentication, don't use cache since each user has their own token
+  const useCache = !session?.accessToken;
+
+  // Check if we have a cached provider that's still fresh (only for non-OBO)
   if (
+    useCache &&
     oauthProviderCache &&
     Date.now() - oauthProviderCacheTime < PROVIDER_CACHE_DURATION
   ) {
@@ -174,9 +182,9 @@ async function getOrCreateDatabricksProvider(): Promise<CachedProvider> {
     return oauthProviderCache;
   }
 
-  console.log('Creating new OAuth provider');
+  console.log('Creating new OAuth provider' + (session?.accessToken ? ' (OBO)' : ''));
   // Ensure we have a valid token before creating provider
-  await getProviderToken();
+  await getProviderToken(session);
   const hostname = await getWorkspaceHostname();
 
   // Create provider with fetch that always uses fresh token
@@ -185,7 +193,7 @@ async function getOrCreateDatabricksProvider(): Promise<CachedProvider> {
     formatUrl: ({ baseUrl, path }) => API_PROXY ?? `${baseUrl}${path}`,
     fetch: async (...[input, init]: Parameters<typeof fetch>) => {
       // Always get fresh token for each request (will use cache if valid)
-      const currentToken = await getProviderToken();
+      const currentToken = await getProviderToken(session);
       const headers = new Headers(init?.headers);
       headers.set('Authorization', `Bearer ${currentToken}`);
 
@@ -196,8 +204,12 @@ async function getOrCreateDatabricksProvider(): Promise<CachedProvider> {
     },
   });
 
-  oauthProviderCache = provider;
-  oauthProviderCacheTime = Date.now();
+  // Only cache provider for non-OBO authentication
+  if (useCache) {
+    oauthProviderCache = provider;
+    oauthProviderCacheTime = Date.now();
+  }
+
   return provider;
 }
 
@@ -208,7 +220,12 @@ const endpointDetailsCache = new Map<
 const ENDPOINT_DETAILS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Get the task type of the serving endpoint
-const getEndpointDetails = async (servingEndpoint: string) => {
+// Note: Uses service principal token (not OBO) since reading endpoint metadata
+// requires broader permissions than querying the endpoint for inference
+const getEndpointDetails = async (
+  servingEndpoint: string,
+  _session?: AuthSession | null,
+) => {
   const cached = endpointDetailsCache.get(servingEndpoint);
   if (
     cached &&
@@ -217,8 +234,9 @@ const getEndpointDetails = async (servingEndpoint: string) => {
     return cached;
   }
 
-  // Always get fresh token for each request (will use cache if valid)
-  const currentToken = await getProviderToken();
+  // Use service principal token for metadata lookup (not OBO)
+  // OBO tokens may not have permission to read endpoint metadata
+  const currentToken = await getProviderToken(null);
   const hostname = await getWorkspaceHostname();
   const headers = new Headers();
   headers.set('Authorization', `Bearer ${currentToken}`);
@@ -230,6 +248,18 @@ const getEndpointDetails = async (servingEndpoint: string) => {
       headers,
     },
   );
+
+  // Handle non-OK responses gracefully
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.warn(`[getEndpointDetails] Failed to get endpoint details: ${response.status} ${errorText}`);
+    // Default to responses agent if we can't determine the task type
+    return {
+      task: undefined,
+      timestamp: Date.now(),
+    };
+  }
+
   const data = (await response.json()) as { task: string | undefined };
   const returnValue = {
     task: data.task as string | undefined,
@@ -241,7 +271,7 @@ const getEndpointDetails = async (servingEndpoint: string) => {
 
 // Create a smart provider wrapper that handles OAuth initialization
 interface SmartProvider {
-  languageModel(id: string): Promise<LanguageModelV2>;
+  languageModel(id: string, session?: AuthSession | null): Promise<LanguageModelV2>;
 }
 
 export class OAuthAwareProvider implements SmartProvider {
@@ -251,16 +281,21 @@ export class OAuthAwareProvider implements SmartProvider {
   >();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  async languageModel(id: string): Promise<LanguageModelV2> {
-    // Check cache first
-    const cached = this.modelCache.get(id);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      console.log(`Using cached model for ${id}`);
-      return cached.model;
+  async languageModel(id: string, session?: AuthSession | null): Promise<LanguageModelV2> {
+    // For OBO authentication, don't use cache since each user has their own context
+    const useCache = !session?.accessToken;
+
+    // Check cache first (only for non-OBO)
+    if (useCache) {
+      const cached = this.modelCache.get(id);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+        console.log(`Using cached model for ${id}`);
+        return cached.model;
+      }
     }
 
-    // Get the OAuth provider
-    const provider = await getOrCreateDatabricksProvider();
+    // Get the OAuth provider (passing session for OBO)
+    const provider = await getOrCreateDatabricksProvider(session);
 
     const model = await (async () => {
       if (API_PROXY) {
@@ -268,6 +303,13 @@ export class OAuthAwareProvider implements SmartProvider {
         return provider.responsesAgent(id);
       }
       if (id === 'title-model' || id === 'artifact-model') {
+        // Foundation Model API doesn't support OBO tokens, so use service principal
+        // Get a non-OBO provider for these models
+        if (session?.accessToken) {
+          console.log(`[${id}] Foundation Model API call - using service principal instead of OBO`);
+          const nonOboProvider = await getOrCreateDatabricksProvider(null);
+          return nonOboProvider.fmapi('databricks-meta-llama-3-3-70b-instruct');
+        }
         return provider.fmapi('databricks-meta-llama-3-3-70b-instruct');
       }
       // Server-side environment validation
@@ -278,9 +320,9 @@ export class OAuthAwareProvider implements SmartProvider {
       }
 
       const servingEndpoint = process.env.DATABRICKS_SERVING_ENDPOINT;
-      const endpointDetails = await getEndpointDetails(servingEndpoint);
+      const endpointDetails = await getEndpointDetails(servingEndpoint, session);
 
-      console.log(`Creating fresh model for ${id}`);
+      console.log(`Creating fresh model for ${id}` + (session?.accessToken ? ' (OBO)' : ''));
       switch (endpointDetails.task) {
         case 'agent/v2/chat':
           return provider.chatAgent(servingEndpoint);
@@ -299,8 +341,11 @@ export class OAuthAwareProvider implements SmartProvider {
       middleware: [extractReasoningMiddleware({ tagName: 'think' })],
     });
 
-    // Cache the model
-    this.modelCache.set(id, { model: wrappedModel, timestamp: Date.now() });
+    // Cache the model (only for non-OBO)
+    if (useCache) {
+      this.modelCache.set(id, { model: wrappedModel, timestamp: Date.now() });
+    }
+
     return wrappedModel;
   }
 }
