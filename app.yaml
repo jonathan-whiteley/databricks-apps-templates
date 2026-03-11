@@ -1,0 +1,12 @@
+command: ["npm", "run", "start"]
+runtime: nodejs20
+
+# Enable On-Behalf-Of authentication
+# This allows the app to use the user's access token for API calls
+# The token is available via the X-Forwarded-Access-Token header
+# OAuth scopes are configured via user_api_scopes in databricks.yml
+on_behalf_of_authentication: true
+
+env:
+  - name: DATABRICKS_SERVING_ENDPOINT
+    valueFrom: serving-endpoint
