@@ -46,11 +46,11 @@ Standard date spine covering 2025-06-01 through 2026-05-31.
 
 ### `jdub_demo.chipotle.fact_transactions` (~800-1000 rows)
 
-One row per transaction line item.
+One row per line item (each transaction_id is unique — a multi-item order generates multiple rows with distinct IDs).
 
 | Column | Type | Description |
 |--------|------|-------------|
-| transaction_id | STRING | PK, e.g. "TXN-000001" |
+| transaction_id | STRING | PK — unique per line item, e.g. "TXN-000001" |
 | store_id | STRING | FK to dim_store |
 | transaction_date | DATE | FK to dim_date |
 | item_id | STRING | FK to dim_menu_item |
@@ -177,9 +177,10 @@ Auth remains OBO via `app.yaml` (unchanged).
 3. **Create git worktree** (independent of 1-2) — branch `chipotle` from current HEAD of `main`
 4. **Rebrand app** (depends on 3) — modify ~7 files listed above
 5. **Update databricks.yml with Genie space ID + MAS endpoint** (depends on 2, 3) — set captured IDs
-6. **Deploy** (depends on 4, 5) — `databricks bundle deploy` + `databricks bundle run` from worktree
+6. **Build frontend** (depends on 4, 5) — `npm run build` in worktree (required per CLAUDE.md before deploy)
+7. **Deploy** (depends on 6) — `databricks bundle deploy` + `databricks bundle run` from worktree
 
-Steps 1 and 3 can run in parallel. Step 2 follows 1. Steps 4-5 follow 2+3. Step 6 follows 4+5.
+Steps 1 and 3 can run in parallel. Step 2 follows 1. Steps 4-5 follow 2+3. Step 6 follows 4+5. Step 7 follows 6.
 
 ## Out of Scope
 
