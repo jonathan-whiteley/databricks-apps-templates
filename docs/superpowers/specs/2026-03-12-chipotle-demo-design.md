@@ -137,6 +137,10 @@ Replace the 2 existing starter questions in `client/src/components/suggested-act
 3. "Which menu categories drive the most revenue?"
 4. "How do digital orders compare to in-store over time?"
 
+### User Message Bubble Color (CRITICAL)
+
+In `client/src/components/message.tsx` line 185-189, the user message bubble has a **hardcoded inline style** `backgroundColor: '#D1282E'` (Panda red). This overrides CSS variables due to higher specificity. Remove the entire `style` prop and add `bg-primary text-primary-foreground` to the className instead. Without this fix, user message bubbles will remain Panda-branded regardless of CSS variable changes.
+
 ### App Title
 
 `client/index.html` title -> "Chipotle Operations Genie"
@@ -151,7 +155,8 @@ Replace the 2 existing starter questions in `client/src/components/suggested-act
 | 4 | `client/src/components/app-sidebar.tsx` | Logo ref + app name text |
 | 5 | `client/src/components/greeting.tsx` | Heading, subheading, logo path + alt text |
 | 6 | `client/src/components/suggested-actions.tsx` | 4 new starter questions |
-| 7 | `databricks.yml` | All variable defaults updated (see below) |
+| 7 | `client/src/components/message.tsx` | Remove hardcoded inline `backgroundColor: '#D1282E'`, replace with `bg-primary text-primary-foreground` Tailwind classes |
+| 8 | `databricks.yml` | All variable defaults updated (see below) |
 
 ## Deployment (databricks.yml)
 
