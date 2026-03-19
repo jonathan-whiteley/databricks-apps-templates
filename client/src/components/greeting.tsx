@@ -32,8 +32,8 @@ export const Greeting = () => {
         className="mt-6 flex justify-center"
       >
         <img
-          src="/Panda_Express_logo.svg"
-          alt="Panda Express Logo"
+          src="/FlightSafety-Logo-Color.svg"
+          alt="FlightSafety Logo"
           className="h-24 w-auto"
         />
       </motion.div>
