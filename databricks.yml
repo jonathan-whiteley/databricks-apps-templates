@@ -3,8 +3,8 @@ bundle:
 
 variables:
   serving_endpoint_name:
-    description: "Name of the MAS serving endpoint (TODO: set after MAS creation)"
-    default: "TODO"
+    description: "Name of the MAS serving endpoint"
+    default: "mas-71d28e24-endpoint"
   database_instance_name:
     description: "Base name of the Lakebase database instance"
     default: "flightsafety-lakebase"
