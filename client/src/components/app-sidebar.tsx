@@ -39,12 +39,12 @@ export function AppSidebar({
               className="flex flex-row items-center gap-2"
             >
               <img
-                src="/Panda_Express_logo.svg"
-                alt="Panda Express"
+                src="/FlightSafety-Logo-Color.svg"
+                alt="FlightSafety"
                 className="h-8 w-auto"
               />
               <span className="cursor-pointer rounded-md px-1 font-semibold text-lg hover:bg-muted">
-                Panda P&amp;L Genie
+                FlightSafety
               </span>
             </Link>
             <Tooltip>
