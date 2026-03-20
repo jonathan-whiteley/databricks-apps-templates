@@ -41,11 +41,8 @@ export function AppSidebar({
               <img
                 src="/FlightSafety-Logo-Color.svg"
                 alt="FlightSafety"
-                className="h-8 w-auto"
+                className="h-6 w-auto"
               />
-              <span className="cursor-pointer rounded-md px-1 font-semibold text-lg hover:bg-muted">
-                FlightSafety
-              </span>
             </Link>
             <Tooltip>
               <TooltipTrigger asChild>
