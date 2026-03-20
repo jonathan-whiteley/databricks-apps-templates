@@ -16,14 +16,16 @@ interface SuggestedActionsProps {
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const { chatHistoryEnabled } = useAppConfig();
   const suggestedActions = [
-    'How can you help me?',
-    'Tell me something I might not know',
+    'What can you help me with?',
+    "What's the current utilization across our 737 simulators?",
+    "We're seeing a visual system flicker on SIM-003, has this happened before?",
+    'Which simulators had the most maintenance downtime this quarter?',
   ];
 
   return (
     <div
       data-testid="suggested-actions"
-      className="grid w-full gap-2 sm:grid-cols-2"
+      className="grid w-full gap-2 grid-cols-1 sm:grid-cols-2"
     >
       {suggestedActions.map((suggestedAction, index) => (
         <motion.div
