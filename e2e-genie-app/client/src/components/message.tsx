@@ -221,9 +221,17 @@ const PurePreviewMessage = ({
                           : undefined
                       }
                     >
-                      <Response>
-                        {sanitizeText(joinMessagePartSegments(parts))}
-                      </Response>
+                      {message.role === 'assistant' ? (
+                        <CollapsibleTable>
+                          <Response>
+                            {sanitizeText(joinMessagePartSegments(parts))}
+                          </Response>
+                        </CollapsibleTable>
+                      ) : (
+                        <Response>
+                          {sanitizeText(joinMessagePartSegments(parts))}
+                        </Response>
+                      )}
                     </MessageContent>
                   </div>
                 );
