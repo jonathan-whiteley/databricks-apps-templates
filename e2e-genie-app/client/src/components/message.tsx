@@ -35,6 +35,7 @@ import {
   joinMessagePartSegments,
 } from './databricks-message-part-transformers';
 import { MessageError } from './message-error';
+import { MessageOAuthError } from './message-oauth-error';
 import { CollapsibleTable } from './elements/collapsible-table';
 import { Streamdown } from 'streamdown';
 import { DATABRICKS_TOOL_CALL_ID } from '@chat-template/ai-sdk-providers/tools';
@@ -45,6 +46,22 @@ import {
   isApprovalStatusOutput,
 } from '@chat-template/ai-sdk-providers/mcp';
 import { useApproval } from '@/hooks/use-approval';
+
+function isOAuthError(errorText: string): boolean {
+  const oauthPatterns = [
+    'oauth',
+    'consent',
+    'unauthorized',
+    'credential',
+    'token',
+    'permission',
+    'access_denied',
+    'invalid_grant',
+    'required scopes',
+  ];
+  const lower = errorText.toLowerCase();
+  return oauthPatterns.some((pattern) => lower.includes(pattern));
+}
 
 const PurePreviewMessage = ({
   message,
@@ -394,12 +411,19 @@ const PurePreviewMessage = ({
 
           {errorParts.length > 0 && (hasOnlyErrors || showErrors) && (
             <div className="flex flex-col gap-2">
-              {errorParts.map((part, index) => (
-                <MessageError
-                  key={`error-${message.id}-${index}`}
-                  error={part.data}
-                />
-              ))}
+              {errorParts.map((part, index) =>
+                isOAuthError(String(part.data)) ? (
+                  <MessageOAuthError
+                    key={`error-${message.id}-${index}`}
+                    error={String(part.data)}
+                  />
+                ) : (
+                  <MessageError
+                    key={`error-${message.id}-${index}`}
+                    error={part.data}
+                  />
+                ),
+              )}
             </div>
           )}
         </div>
