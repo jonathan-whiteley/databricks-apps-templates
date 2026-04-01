@@ -35,6 +35,7 @@ import {
   joinMessagePartSegments,
 } from './databricks-message-part-transformers';
 import { MessageError } from './message-error';
+import { CollapsibleTable } from './elements/collapsible-table';
 import { Streamdown } from 'streamdown';
 import { DATABRICKS_TOOL_CALL_ID } from '@chat-template/ai-sdk-providers/tools';
 import {
@@ -290,11 +291,13 @@ const PurePreviewMessage = ({
                                   Error: {errorText}
                                 </div>
                               ) : (
-                                <div className="whitespace-pre-wrap font-mono text-sm">
-                                  {typeof output === 'string'
-                                    ? output
-                                    : JSON.stringify(output, null, 2)}
-                                </div>
+                                <CollapsibleTable>
+                                  <div className="whitespace-pre-wrap font-mono text-sm">
+                                    {typeof output === 'string'
+                                      ? output
+                                      : JSON.stringify(output, null, 2)}
+                                  </div>
+                                </CollapsibleTable>
                               )
                             }
                             errorText={undefined}
@@ -333,11 +336,13 @@ const PurePreviewMessage = ({
                               Error: {errorText}
                             </div>
                           ) : (
-                            <div className="whitespace-pre-wrap font-mono text-sm">
-                              {typeof output === 'string'
-                                ? output
-                                : JSON.stringify(output, null, 2)}
-                            </div>
+                            <CollapsibleTable>
+                              <div className="whitespace-pre-wrap font-mono text-sm">
+                                {typeof output === 'string'
+                                  ? output
+                                  : JSON.stringify(output, null, 2)}
+                              </div>
+                            </CollapsibleTable>
                           )
                         }
                         errorText={undefined}
