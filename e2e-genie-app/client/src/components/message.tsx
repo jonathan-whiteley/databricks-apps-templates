@@ -274,6 +274,25 @@ const PurePreviewMessage = ({
                   ? 'input-available'
                   : state;
 
+              // Fix: MAS/Responses Agent returns tool results as text, not function_call_output.
+              // If the tool state is 'input-available' (Running) but there are subsequent parts
+              // after this tool call (meaning results came back) and we're not loading, infer completed.
+              const hasSubsequentContent =
+                partSegments &&
+                index < partSegments.length - 1 &&
+                partSegments
+                  .slice(index + 1)
+                  .some(
+                    (seg) =>
+                      seg[0].type === 'text' || seg[0].type === 'reasoning',
+                  );
+              const inferredState: ToolState =
+                effectiveState === 'input-available' &&
+                !isLoading &&
+                hasSubsequentContent
+                  ? 'output-available'
+                  : effectiveState;
+
               // Render MCP tool calls with special styling
               if (isMcpApproval) {
                 return (
@@ -281,7 +300,7 @@ const PurePreviewMessage = ({
                     <McpToolHeader
                       serverName={mcpServerName}
                       toolName={toolName || 'mcp-tool'}
-                      state={effectiveState}
+                      state={inferredState}
                       approvalStatus={approvalStatus}
                     />
                     <McpToolContent>
@@ -333,9 +352,9 @@ const PurePreviewMessage = ({
 
               // Render regular tool calls
               const displayState: ToolState =
-                isCancelled && effectiveState === 'input-available'
+                isCancelled && inferredState === 'input-available'
                   ? 'cancelled'
-                  : effectiveState;
+                  : inferredState;
 
               return (
                 <Tool key={toolCallId} defaultOpen={true}>
@@ -346,7 +365,7 @@ const PurePreviewMessage = ({
                     showStop={
                       !isCancelled &&
                       (status === 'streaming' || status === 'submitted') &&
-                      effectiveState === 'input-available'
+                      inferredState === 'input-available'
                     }
                   />
                   <ToolContent>
