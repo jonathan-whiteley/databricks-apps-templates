@@ -4,7 +4,14 @@ import { Actions, Action } from './elements/actions';
 import { memo } from 'react';
 import { toast } from 'sonner';
 import type { ChatMessage } from '@chat-template/core';
-import { ChevronDown, ChevronUp, CopyIcon, PencilLineIcon } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  CopyIcon,
+  PencilLineIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
+} from 'lucide-react';
 
 function PureMessageActions({
   message,
@@ -13,6 +20,9 @@ function PureMessageActions({
   errorCount = 0,
   showErrors = false,
   onToggleErrors,
+  vote,
+  onVote,
+  feedbackEnabled = false,
 }: {
   message: ChatMessage;
   isLoading: boolean;
@@ -20,6 +30,9 @@ function PureMessageActions({
   errorCount?: number;
   showErrors?: boolean;
   onToggleErrors?: () => void;
+  vote?: 'up' | 'down';
+  onVote?: (isUpvoted: 'up' | 'down') => void;
+  feedbackEnabled?: boolean;
 }) {
   const [_, copyToClipboard] = useCopyToClipboard();
 
@@ -71,6 +84,28 @@ function PureMessageActions({
           <CopyIcon />
         </Action>
       )}
+      {feedbackEnabled && onVote && (
+        <>
+          <Action
+            tooltip="Good response"
+            onClick={() => onVote('up')}
+            className={vote === 'up' ? 'text-green-600 dark:text-green-400' : ''}
+          >
+            <ThumbsUpIcon className={vote === 'up' ? 'fill-current' : ''} />
+          </Action>
+          <Action
+            tooltip="Bad response"
+            onClick={() => onVote('down')}
+            className={
+              vote === 'down' ? 'text-red-600 dark:text-red-400' : ''
+            }
+          >
+            <ThumbsDownIcon
+              className={vote === 'down' ? 'fill-current' : ''}
+            />
+          </Action>
+        </>
+      )}
       {errorCount > 0 && onToggleErrors && (
         <Action
           tooltip={showErrors ? 'Hide errors' : 'Show errors'}
@@ -95,7 +130,8 @@ export const MessageActions = memo(
     if (prevProps.isLoading !== nextProps.isLoading) return false;
     if (prevProps.errorCount !== nextProps.errorCount) return false;
     if (prevProps.showErrors !== nextProps.showErrors) return false;
-
+    if (prevProps.vote !== nextProps.vote) return false;
+    if (prevProps.feedbackEnabled !== nextProps.feedbackEnabled) return false;
     return true;
   },
 );

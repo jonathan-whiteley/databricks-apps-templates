@@ -58,6 +58,9 @@ const PurePreviewMessage = ({
   requiresScrollPadding,
   cancelledMessageIds,
   stop,
+  vote,
+  onVote,
+  feedbackEnabled,
 }: {
   chatId: string;
   message: ChatMessage;
@@ -71,6 +74,9 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
   cancelledMessageIds?: Set<string>;
   stop?: () => void;
+  vote?: 'up' | 'down';
+  onVote?: (isUpvoted: 'up' | 'down') => void;
+  feedbackEnabled?: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [showErrors, setShowErrors] = useState(false);
@@ -378,6 +384,9 @@ const PurePreviewMessage = ({
               errorCount={errorParts.length}
               showErrors={showErrors}
               onToggleErrors={() => setShowErrors(!showErrors)}
+              vote={vote}
+              onVote={onVote}
+              feedbackEnabled={feedbackEnabled}
             />
           )}
 

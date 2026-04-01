@@ -4,6 +4,7 @@ import { memo, useEffect } from 'react';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { useMessages } from '@/hooks/use-messages';
+import { useFeedback } from '@/hooks/use-feedback';
 import type { ChatMessage } from '@chat-template/core';
 import { useDataStream } from './data-stream-provider';
 import { Conversation, ConversationContent } from './elements/conversation';
@@ -45,6 +46,8 @@ function PureMessages({
   } = useMessages({
     status,
   });
+
+  const { getVote, submitVote, feedbackEnabled } = useFeedback({ chatId });
 
   useDataStream();
 
@@ -91,6 +94,9 @@ function PureMessages({
               }
               cancelledMessageIds={cancelledMessageIds}
               stop={stop}
+              vote={getVote(message.id)}
+              onVote={(isUpvoted) => submitVote(message.id, isUpvoted)}
+              feedbackEnabled={feedbackEnabled}
             />
           ))}
 
