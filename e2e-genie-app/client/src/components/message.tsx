@@ -18,6 +18,7 @@ import {
   McpToolInput,
   McpApprovalActions,
 } from './elements/mcp-tool';
+import { CancelledBadge } from './elements/cancelled-badge';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import equal from 'fast-deep-equal';
@@ -47,22 +48,28 @@ import { useApproval } from '@/hooks/use-approval';
 const PurePreviewMessage = ({
   message,
   isLoading,
+  status,
   setMessages,
   addToolResult,
   sendMessage,
   regenerate,
   isReadonly,
   requiresScrollPadding,
+  cancelledMessageIds,
+  stop,
 }: {
   chatId: string;
   message: ChatMessage;
   isLoading: boolean;
+  status?: UseChatHelpers<ChatMessage>['status'];
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
   addToolResult: UseChatHelpers<ChatMessage>['addToolResult'];
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
   requiresScrollPadding: boolean;
+  cancelledMessageIds?: Set<string>;
+  stop?: () => void;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [showErrors, setShowErrors] = useState(false);
@@ -82,6 +89,8 @@ const PurePreviewMessage = ({
     () => message.parts.filter((part) => part.type === 'data-error'),
     [message.parts],
   );
+
+  const isCancelled = cancelledMessageIds?.has(message.id) ?? false;
 
   useDataStream();
 
@@ -297,11 +306,22 @@ const PurePreviewMessage = ({
               }
 
               // Render regular tool calls
+              const displayState: ToolState =
+                isCancelled && effectiveState === 'input-available'
+                  ? 'cancelled'
+                  : effectiveState;
+
               return (
                 <Tool key={toolCallId} defaultOpen={true}>
                   <ToolHeader
                     type={toolName || 'tool-call'}
-                    state={effectiveState}
+                    state={displayState}
+                    onStop={stop}
+                    showStop={
+                      !isCancelled &&
+                      (status === 'streaming' || status === 'submitted') &&
+                      effectiveState === 'input-available'
+                    }
                   />
                   <ToolContent>
                     <ToolInput input={input} />
@@ -356,6 +376,8 @@ const PurePreviewMessage = ({
             />
           )}
 
+          {isCancelled && <CancelledBadge />}
+
           {errorParts.length > 0 && (hasOnlyErrors || showErrors) && (
             <div className="flex flex-col gap-2">
               {errorParts.map((part, index) => (
@@ -376,8 +398,11 @@ export const PreviewMessage = memo(
   PurePreviewMessage,
   (prevProps, nextProps) => {
     if (prevProps.isLoading !== nextProps.isLoading) return false;
+    if (prevProps.status !== nextProps.status) return false;
     if (prevProps.message.id !== nextProps.message.id) return false;
     if (prevProps.requiresScrollPadding !== nextProps.requiresScrollPadding)
+      return false;
+    if (prevProps.cancelledMessageIds !== nextProps.cancelledMessageIds)
       return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
 

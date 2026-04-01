@@ -19,6 +19,8 @@ interface MessagesProps {
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
   selectedModelId: string;
+  cancelledMessageIds?: Set<string>;
+  stop?: () => void;
 }
 
 function PureMessages({
@@ -31,6 +33,8 @@ function PureMessages({
   regenerate,
   isReadonly,
   selectedModelId,
+  cancelledMessageIds,
+  stop,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -76,6 +80,7 @@ function PureMessages({
               isLoading={
                 status === 'streaming' && messages.length - 1 === index
               }
+              status={status}
               setMessages={setMessages}
               addToolResult={addToolResult}
               sendMessage={sendMessage}
@@ -84,6 +89,8 @@ function PureMessages({
               requiresScrollPadding={
                 hasSentMessage && index === messages.length - 1
               }
+              cancelledMessageIds={cancelledMessageIds}
+              stop={stop}
             />
           ))}
 
