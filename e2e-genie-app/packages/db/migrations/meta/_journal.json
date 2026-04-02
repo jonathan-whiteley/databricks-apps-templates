@@ -15,6 +15,13 @@
       "when": 1775070645694,
       "tag": "0001_lowly_marvex",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775155624359,
+      "tag": "0002_huge_swordsman",
+      "breakpoints": true
     }
   ]
 }

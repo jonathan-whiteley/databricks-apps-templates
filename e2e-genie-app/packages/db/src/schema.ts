@@ -10,7 +10,6 @@ import {
   primaryKey,
 } from 'drizzle-orm/pg-core';
 import type { LanguageModelV2Usage } from '@ai-sdk/provider';
-import type { User as SharedUser } from '@chat-template/utils';
 
 const schemaName = 'ai_chatbot';
 const customSchema = pgSchema(schemaName);
@@ -18,14 +17,6 @@ const customSchema = pgSchema(schemaName);
 // Helper function to create table with proper schema handling
 // Use the schema object for proper drizzle-kit migration generation
 const createTable = customSchema.table;
-
-export const user = createTable('User', {
-  id: text('id').primaryKey().notNull(),
-  email: varchar('email', { length: 64 }).notNull(),
-  // Password removed - using Databricks SSO authentication
-});
-
-export type User = SharedUser;
 
 export const chat = createTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
