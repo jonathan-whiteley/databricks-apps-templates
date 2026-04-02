@@ -54,6 +54,11 @@ export function Chat({
     initialLastContext,
   );
 
+  const [cancelledMessageIds, setCancelledMessageIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const messagesRef = useRef<ChatMessage[]>(initialMessages);
+
   const [streamCursor, setStreamCursor] = useState(0);
   const streamCursorRef = useRef(streamCursor);
   streamCursorRef.current = streamCursor;
@@ -81,8 +86,18 @@ export function Chat({
   }, []);
 
   const stop = useCallback(() => {
+    const lastMessage = messagesRef.current.at(-1);
+    if (lastMessage?.role === 'assistant') {
+      setCancelledMessageIds((prev) => new Set(prev).add(lastMessage.id));
+    }
+
     abortController.current?.abort('USER_ABORT_SIGNAL');
-  }, []);
+    // Create new AbortController so user can send new messages
+    abortController.current = new AbortController();
+
+    // Fire-and-forget server-side cancel
+    fetch(`/api/chat/${id}/cancel`, { method: 'POST' }).catch(() => {});
+  }, [id]);
 
   const isNewChat = initialMessages.length === 0;
   const didFetchHistoryOnNewChat = useRef(false);
@@ -229,6 +244,9 @@ export function Chat({
     },
   });
 
+  // Keep messagesRef in sync for use in callbacks
+  messagesRef.current = messages;
+
   const [searchParams] = useSearchParams();
   const query = searchParams.get('query');
 
@@ -263,6 +281,8 @@ export function Chat({
           regenerate={regenerate}
           isReadonly={isReadonly}
           selectedModelId={initialChatModel}
+          cancelledMessageIds={cancelledMessageIds}
+          stop={stop}
         />
 
         <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
@@ -272,7 +292,6 @@ export function Chat({
               input={input}
               setInput={setInput}
               status={status}
-              stop={stop}
               attachments={attachments}
               setAttachments={setAttachments}
               messages={messages}

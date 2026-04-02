@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a production-ready, full-stack chatbot application built specifically for **Databricks environments**. It provides a web-based chat interface for interacting with Databricks Agent Serving endpoints, Agent Bricks, and Foundation Model endpoints.
+This is a production-ready, full-stack chatbot application built specifically for **Databricks environments**. It provides a web-based chat interface for interacting with Databricks Genie Spaces via Multi-Agent Supervisor (MAS) endpoints.
 
 **Key characteristics:**
 
@@ -11,6 +11,10 @@ This is a production-ready, full-stack chatbot application built specifically fo
 - PostgreSQL database with Drizzle ORM
 - Vercel AI SDK for streaming responses
 - Databricks-native authentication and deployment
+- Stop/cancel in-flight Genie queries
+- Collapsible table rendering for query results
+- Message feedback with Genie monitoring integration
+- OAuth error handling and OBO (On-Behalf-Of) authentication
 
 ## Architecture
 
@@ -335,6 +339,9 @@ PGUSER=your-databricks-username
 PGHOST=your-lakebase-host  # Use ./scripts/get-pghost.sh
 PGDATABASE=databricks_postgres  # Default, usually don't change
 PGPORT=5432  # Default
+
+# Genie Space
+GENIE_SPACE_ID=01f0aae3f2a812ceb9f489fa0317532a
 ```
 
 ### Required for Production (Databricks Apps)
@@ -522,6 +529,9 @@ resources:
 - `packages/db/src/queries.ts` - Database query helpers
 - `packages/core/src/errors.ts` - Error definitions
 - `packages/ai-sdk-providers/` - Databricks AI provider implementations
+- `server/src/lib/genie-feedback.ts` - Genie feedback / monitoring integration
+- `client/src/components/elements/collapsible-table.tsx` - Collapsible table component for query results
+- `client/src/components/elements/cancelled-badge.tsx` - Cancelled query badge component
 - `scripts/migrate.ts` - Database migration runner (applies SQL migrations from packages/db/migrations/)
 
 ## Additional Resources
@@ -535,7 +545,7 @@ resources:
 ## Repository Etiquette
 
 - **Main branch**: `main`
-- **Current branch**: `remove-nextjs` (feature branch)
+- **Current branch**: `lce` (feature branch)
 - **Commit messages**: Concise, imperative mood
 - **Testing**: Run `npm test` before committing
 - **Linting**: Run `npm run lint` to auto-fix issues

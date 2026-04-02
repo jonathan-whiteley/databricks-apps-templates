@@ -18,6 +18,7 @@ import {
   McpToolInput,
   McpApprovalActions,
 } from './elements/mcp-tool';
+import { CancelledBadge } from './elements/cancelled-badge';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import equal from 'fast-deep-equal';
@@ -34,6 +35,8 @@ import {
   joinMessagePartSegments,
 } from './databricks-message-part-transformers';
 import { MessageError } from './message-error';
+import { MessageOAuthError } from './message-oauth-error';
+import { CollapsibleTable } from './elements/collapsible-table';
 import { Streamdown } from 'streamdown';
 import { DATABRICKS_TOOL_CALL_ID } from '@chat-template/ai-sdk-providers/tools';
 import {
@@ -44,25 +47,53 @@ import {
 } from '@chat-template/ai-sdk-providers/mcp';
 import { useApproval } from '@/hooks/use-approval';
 
+function isOAuthError(errorText: string): boolean {
+  const oauthPatterns = [
+    'oauth',
+    'consent',
+    'unauthorized',
+    'credential',
+    'token',
+    'permission',
+    'access_denied',
+    'invalid_grant',
+    'required scopes',
+  ];
+  const lower = errorText.toLowerCase();
+  return oauthPatterns.some((pattern) => lower.includes(pattern));
+}
+
 const PurePreviewMessage = ({
   message,
   isLoading,
+  status,
   setMessages,
   addToolResult,
   sendMessage,
   regenerate,
   isReadonly,
   requiresScrollPadding,
+  cancelledMessageIds,
+  stop,
+  vote,
+  onVote,
+  feedbackEnabled,
 }: {
   chatId: string;
   message: ChatMessage;
   isLoading: boolean;
+  status?: UseChatHelpers<ChatMessage>['status'];
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
   addToolResult: UseChatHelpers<ChatMessage>['addToolResult'];
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
   requiresScrollPadding: boolean;
+  cancelledMessageIds?: Set<string>;
+  stop?: () => void;
+  vote?: 'up' | 'down';
+  onVote?: (isUpvoted: 'up' | 'down') => void;
+  feedbackEnabled?: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [showErrors, setShowErrors] = useState(false);
@@ -82,6 +113,8 @@ const PurePreviewMessage = ({
     () => message.parts.filter((part) => part.type === 'data-error'),
     [message.parts],
   );
+
+  const isCancelled = cancelledMessageIds?.has(message.id) ?? false;
 
   useDataStream();
 
@@ -188,9 +221,17 @@ const PurePreviewMessage = ({
                           : undefined
                       }
                     >
-                      <Response>
-                        {sanitizeText(joinMessagePartSegments(parts))}
-                      </Response>
+                      {message.role === 'assistant' ? (
+                        <CollapsibleTable>
+                          <Response>
+                            {sanitizeText(joinMessagePartSegments(parts))}
+                          </Response>
+                        </CollapsibleTable>
+                      ) : (
+                        <Response>
+                          {sanitizeText(joinMessagePartSegments(parts))}
+                        </Response>
+                      )}
                     </MessageContent>
                   </div>
                 );
@@ -241,6 +282,25 @@ const PurePreviewMessage = ({
                   ? 'input-available'
                   : state;
 
+              // Fix: MAS/Responses Agent returns tool results as text, not function_call_output.
+              // If the tool state is 'input-available' (Running) but there are subsequent parts
+              // after this tool call (meaning results came back) and we're not loading, infer completed.
+              const hasSubsequentContent =
+                partSegments &&
+                index < partSegments.length - 1 &&
+                partSegments
+                  .slice(index + 1)
+                  .some(
+                    (seg) =>
+                      seg[0].type === 'text' || seg[0].type === 'reasoning',
+                  );
+              const inferredState: ToolState =
+                effectiveState === 'input-available' &&
+                !isLoading &&
+                hasSubsequentContent
+                  ? 'output-available'
+                  : effectiveState;
+
               // Render MCP tool calls with special styling
               if (isMcpApproval) {
                 return (
@@ -248,7 +308,7 @@ const PurePreviewMessage = ({
                     <McpToolHeader
                       serverName={mcpServerName}
                       toolName={toolName || 'mcp-tool'}
-                      state={effectiveState}
+                      state={inferredState}
                       approvalStatus={approvalStatus}
                     />
                     <McpToolContent>
@@ -281,11 +341,13 @@ const PurePreviewMessage = ({
                                   Error: {errorText}
                                 </div>
                               ) : (
-                                <div className="whitespace-pre-wrap font-mono text-sm">
-                                  {typeof output === 'string'
-                                    ? output
-                                    : JSON.stringify(output, null, 2)}
-                                </div>
+                                <CollapsibleTable>
+                                  <div className="whitespace-pre-wrap font-mono text-sm">
+                                    {typeof output === 'string'
+                                      ? output
+                                      : JSON.stringify(output, null, 2)}
+                                  </div>
+                                </CollapsibleTable>
                               )
                             }
                             errorText={undefined}
@@ -297,11 +359,22 @@ const PurePreviewMessage = ({
               }
 
               // Render regular tool calls
+              const displayState: ToolState =
+                isCancelled && inferredState === 'input-available'
+                  ? 'cancelled'
+                  : inferredState;
+
               return (
                 <Tool key={toolCallId} defaultOpen={true}>
                   <ToolHeader
                     type={toolName || 'tool-call'}
-                    state={effectiveState}
+                    state={displayState}
+                    onStop={stop}
+                    showStop={
+                      !isCancelled &&
+                      (status === 'streaming' || status === 'submitted') &&
+                      inferredState === 'input-available'
+                    }
                   />
                   <ToolContent>
                     <ToolInput input={input} />
@@ -313,11 +386,13 @@ const PurePreviewMessage = ({
                               Error: {errorText}
                             </div>
                           ) : (
-                            <div className="whitespace-pre-wrap font-mono text-sm">
-                              {typeof output === 'string'
-                                ? output
-                                : JSON.stringify(output, null, 2)}
-                            </div>
+                            <CollapsibleTable>
+                              <div className="whitespace-pre-wrap font-mono text-sm">
+                                {typeof output === 'string'
+                                  ? output
+                                  : JSON.stringify(output, null, 2)}
+                              </div>
+                            </CollapsibleTable>
                           )
                         }
                         errorText={undefined}
@@ -353,17 +428,29 @@ const PurePreviewMessage = ({
               errorCount={errorParts.length}
               showErrors={showErrors}
               onToggleErrors={() => setShowErrors(!showErrors)}
+              vote={vote}
+              onVote={onVote}
+              feedbackEnabled={feedbackEnabled}
             />
           )}
 
+          {isCancelled && <CancelledBadge />}
+
           {errorParts.length > 0 && (hasOnlyErrors || showErrors) && (
             <div className="flex flex-col gap-2">
-              {errorParts.map((part, index) => (
-                <MessageError
-                  key={`error-${message.id}-${index}`}
-                  error={part.data}
-                />
-              ))}
+              {errorParts.map((part, index) =>
+                isOAuthError(String(part.data)) ? (
+                  <MessageOAuthError
+                    key={`error-${message.id}-${index}`}
+                    error={String(part.data)}
+                  />
+                ) : (
+                  <MessageError
+                    key={`error-${message.id}-${index}`}
+                    error={part.data}
+                  />
+                ),
+              )}
             </div>
           )}
         </div>
@@ -376,8 +463,11 @@ export const PreviewMessage = memo(
   PurePreviewMessage,
   (prevProps, nextProps) => {
     if (prevProps.isLoading !== nextProps.isLoading) return false;
+    if (prevProps.status !== nextProps.status) return false;
     if (prevProps.message.id !== nextProps.message.id) return false;
     if (prevProps.requiresScrollPadding !== nextProps.requiresScrollPadding)
+      return false;
+    if (prevProps.cancelledMessageIds !== nextProps.cancelledMessageIds)
       return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
 

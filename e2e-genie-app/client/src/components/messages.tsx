@@ -4,6 +4,7 @@ import { memo, useEffect } from 'react';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { useMessages } from '@/hooks/use-messages';
+import { useFeedback } from '@/hooks/use-feedback';
 import type { ChatMessage } from '@chat-template/core';
 import { useDataStream } from './data-stream-provider';
 import { Conversation, ConversationContent } from './elements/conversation';
@@ -19,6 +20,8 @@ interface MessagesProps {
   regenerate: UseChatHelpers<ChatMessage>['regenerate'];
   isReadonly: boolean;
   selectedModelId: string;
+  cancelledMessageIds?: Set<string>;
+  stop?: () => void;
 }
 
 function PureMessages({
@@ -31,6 +34,8 @@ function PureMessages({
   regenerate,
   isReadonly,
   selectedModelId,
+  cancelledMessageIds,
+  stop,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -40,6 +45,11 @@ function PureMessages({
     hasSentMessage,
   } = useMessages({
     status,
+  });
+
+  const { getVote, submitVote, feedbackEnabled } = useFeedback({
+    chatId,
+    messages,
   });
 
   useDataStream();
@@ -76,6 +86,7 @@ function PureMessages({
               isLoading={
                 status === 'streaming' && messages.length - 1 === index
               }
+              status={status}
               setMessages={setMessages}
               addToolResult={addToolResult}
               sendMessage={sendMessage}
@@ -84,6 +95,11 @@ function PureMessages({
               requiresScrollPadding={
                 hasSentMessage && index === messages.length - 1
               }
+              cancelledMessageIds={cancelledMessageIds}
+              stop={stop}
+              vote={getVote(message.id)}
+              onVote={(isUpvoted) => submitVote(message.id, isUpvoted)}
+              feedbackEnabled={feedbackEnabled}
             />
           ))}
 

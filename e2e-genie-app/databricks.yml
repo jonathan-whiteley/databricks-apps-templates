@@ -5,10 +5,10 @@ bundle:
 variables:
   serving_endpoint_name:
     description: "Name of the model serving endpoint to be used by the app"
-    default: "mas-06a73aba-endpoint"
+    default: "mas-cfcbc058-endpoint"
   genie_space_id:
-    description: "Space ID of the Genie space to be used by the app"
-    default: "01f0aabba63a1803b37ff594a8a4b01e"
+    description: "Genie Space ID for the app"
+    default: "01f0aae3f2a812ceb9f489fa0317532a"
   database_instance_name:
     description: "Base name of the Lakebase database instance"
     default: "lakebase-e2e"
@@ -29,18 +29,16 @@ resources:
       name: genie-e2e-app-${var.resource_name_suffix}
       description: "Agentic Chat application for Genie Space"
       source_code_path: .
+      user_api_scopes:
+        - serving.serving-endpoints
+        - sql
+        - dashboards.genie
       resources:
         - name: serving-endpoint
           description: "Databricks serving endpoint name for the AI agent"
           serving_endpoint:
             name: ${var.serving_endpoint_name}
             permission: CAN_QUERY
-        - name: genie-space
-          description: "Genie space for data queries"
-          genie_space:
-            name: "genie-space-e2e"
-            space_id: ${var.genie_space_id}
-            permission: CAN_RUN
         - name: database
           description: "Lakebase database instance for the chat app"
           database:
@@ -53,7 +51,7 @@ targets:
     mode: development
     default: true
     variables:
-      resource_name_suffix: "dev"
+      resource_name_suffix: "lce"
 
   staging:
     mode: production
