@@ -47,7 +47,10 @@ function PureMessages({
     status,
   });
 
-  const { getVote, submitVote, feedbackEnabled } = useFeedback({ chatId });
+  const { getVote, submitVote, feedbackEnabled } = useFeedback({
+    chatId,
+    messages,
+  });
 
   useDataStream();
 

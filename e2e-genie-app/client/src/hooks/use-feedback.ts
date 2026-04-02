@@ -2,6 +2,7 @@ import useSWR from 'swr';
 import { useCallback } from 'react';
 import { fetcher } from '@/lib/utils';
 import { useAppConfig } from '@/contexts/AppConfigContext';
+import type { ChatMessage } from '@chat-template/core';
 
 interface Vote {
   chatId: string;
@@ -9,7 +10,13 @@ interface Vote {
   isUpvoted: 'up' | 'down';
 }
 
-export function useFeedback({ chatId }: { chatId: string }) {
+export function useFeedback({
+  chatId,
+  messages,
+}: {
+  chatId: string;
+  messages?: ChatMessage[];
+}) {
   const { feedbackEnabled } = useAppConfig();
 
   const { data: votes, mutate } = useSWR<Vote[]>(
@@ -22,6 +29,19 @@ export function useFeedback({ chatId }: { chatId: string }) {
 
   const submitVote = useCallback(
     async (messageId: string, isUpvoted: 'up' | 'down') => {
+      // Extract genie_query from tool call parts if available
+      const message = messages?.find((m) => m.id === messageId);
+      const genieQuery = message?.parts
+        ?.filter(
+          (p): p is { type: string; input?: Record<string, unknown> } =>
+            typeof p === 'object' &&
+            p !== null &&
+            'type' in p &&
+            p.type === 'tool-databricks-tool-call',
+        )
+        ?.map((p) => p.input?.genie_query as string | undefined)
+        ?.find(Boolean);
+
       const optimisticVotes = [
         ...(votes?.filter((v) => v.messageId !== messageId) ?? []),
         { chatId, messageId, isUpvoted },
@@ -32,7 +52,12 @@ export function useFeedback({ chatId }: { chatId: string }) {
         await fetch('/api/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chatId, messageId, isUpvoted }),
+          body: JSON.stringify({
+            chatId,
+            messageId,
+            isUpvoted,
+            genieQuery,
+          }),
         });
         mutate();
       } catch (error) {
@@ -40,7 +65,7 @@ export function useFeedback({ chatId }: { chatId: string }) {
         mutate();
       }
     },
-    [chatId, votes, mutate],
+    [chatId, messages, votes, mutate],
   );
 
   const getVote = useCallback(

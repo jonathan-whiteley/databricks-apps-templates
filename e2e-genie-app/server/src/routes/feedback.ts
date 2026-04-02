@@ -14,6 +14,10 @@ import {
 } from '@chat-template/db';
 import { checkChatAccess } from '@chat-template/core';
 import { ChatSDKError } from '@chat-template/core/errors';
+import {
+  findGenieMessage,
+  submitGenieFeedback,
+} from '../lib/genie-feedback';
 
 export const feedbackRouter: RouterType = Router();
 feedbackRouter.use(authMiddleware);
@@ -23,7 +27,7 @@ feedbackRouter.use(authMiddleware);
  */
 feedbackRouter.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const { chatId, messageId, isUpvoted } = req.body;
+    const { chatId, messageId, isUpvoted, genieQuery } = req.body;
 
     if (!chatId || !messageId || !isUpvoted) {
       const error = new ChatSDKError('bad_request:api');
@@ -45,6 +49,22 @@ feedbackRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     }
 
     await upsertVote({ chatId, messageId, isUpvoted });
+
+    // Fire-and-forget Genie feedback submission
+    if (genieQuery) {
+      findGenieMessage(genieQuery, req.session)
+        .then((ids) => {
+          if (ids) {
+            const rating =
+              isUpvoted === 'up' ? 'POSITIVE' : 'NEGATIVE';
+            submitGenieFeedback(ids, rating, req.session);
+          }
+        })
+        .catch((err) => {
+          console.error('[Feedback] Genie feedback error:', err);
+        });
+    }
+
     return res.status(200).json({ success: true });
   } catch (error) {
     if (error instanceof ChatSDKError) {
