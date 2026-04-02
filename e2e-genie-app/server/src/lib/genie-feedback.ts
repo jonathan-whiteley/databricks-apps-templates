@@ -30,8 +30,9 @@ export async function findGenieMessage(
 ): Promise<GenieFeedbackIds | null> {
   if (!GENIE_SPACE_ID || !session?.accessToken) return null;
 
-  const host = process.env.DATABRICKS_HOST;
-  if (!host) return null;
+  const rawHost = process.env.DATABRICKS_HOST;
+  if (!rawHost) return null;
+  const host = rawHost.startsWith('http') ? rawHost : `https://${rawHost}`;
 
   try {
     const convResponse = await fetch(
@@ -110,8 +111,9 @@ export async function submitGenieFeedback(
 ): Promise<boolean> {
   if (!session?.accessToken) return false;
 
-  const host = process.env.DATABRICKS_HOST;
-  if (!host) return false;
+  const rawHost = process.env.DATABRICKS_HOST;
+  if (!rawHost) return false;
+  const host = rawHost.startsWith('http') ? rawHost : `https://${rawHost}`;
 
   try {
     const response = await fetch(
