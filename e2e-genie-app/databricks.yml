@@ -33,9 +33,6 @@ resources:
         - serving.serving-endpoints
         - sql
         - dashboards.genie
-      env:
-        - name: GENIE_SPACE_ID
-          value: ${var.genie_space_id}
       resources:
         - name: serving-endpoint
           description: "Databricks serving endpoint name for the AI agent"
@@ -54,7 +51,7 @@ targets:
     mode: development
     default: true
     variables:
-      resource_name_suffix: "dev"
+      resource_name_suffix: "lce"
 
   staging:
     mode: production
