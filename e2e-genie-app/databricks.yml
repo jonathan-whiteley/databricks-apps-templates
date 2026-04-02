@@ -7,8 +7,8 @@ variables:
     description: "Name of the model serving endpoint to be used by the app"
     default: "mas-cfcbc058-endpoint"
   genie_space_id:
-    description: "Space ID of the Genie space to be used by the app"
-    default: "01f0aabba63a1803b37ff594a8a4b01e"
+    description: "Genie Space ID for the app"
+    default: "01f0aae3f2a812ceb9f489fa0317532a"
   database_instance_name:
     description: "Base name of the Lakebase database instance"
     default: "lakebase-e2e"
@@ -26,13 +26,16 @@ resources:
   apps:
     databricks_chatbot:
       # UPDATE THIS: customize the app name here, if desired
-      name: genie-e2e-app-lce
+      name: genie-e2e-app-${var.resource_name_suffix}
       description: "Agentic Chat application for Genie Space"
       source_code_path: .
       user_api_scopes:
         - serving.serving-endpoints
         - sql
         - dashboards.genie
+      env:
+        - name: GENIE_SPACE_ID
+          value: ${var.genie_space_id}
       resources:
         - name: serving-endpoint
           description: "Databricks serving endpoint name for the AI agent"
