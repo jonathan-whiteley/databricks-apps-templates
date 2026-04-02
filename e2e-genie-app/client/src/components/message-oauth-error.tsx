@@ -20,7 +20,7 @@ export function MessageOAuthError({ error }: MessageOAuthErrorProps) {
           <summary className="cursor-pointer text-amber-600 text-xs dark:text-amber-400">
             Error details
           </summary>
-          <pre className="mt-1 max-h-24 overflow-auto rounded bg-amber-100 p-2 font-mono text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+          <pre className='mt-1 max-h-24 overflow-auto rounded bg-amber-100 p-2 font-mono text-amber-800 text-xs dark:bg-amber-900 dark:text-amber-200'>
             {error}
           </pre>
         </details>

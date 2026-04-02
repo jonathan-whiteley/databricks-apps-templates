@@ -79,14 +79,14 @@ export function CollapsibleTable({
       >
         {children}
         {!isExpanded && (
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-muted/50 to-transparent" />
+          <div className='pointer-events-none absolute right-0 bottom-0 left-0 h-6 bg-gradient-to-t from-muted/50 to-transparent' />
         )}
       </div>
       <div className="flex justify-center pt-2">
         <Button
           variant="outline"
           size="sm"
-          className="h-7 gap-1 text-xs text-muted-foreground"
+          className='h-7 gap-1 text-muted-foreground text-xs'
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? (
