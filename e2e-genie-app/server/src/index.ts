@@ -44,12 +44,6 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
 // Health check endpoint (for Playwright tests)
 app.get('/ping', (_req, res) => {
   res.status(200).send('pong');
