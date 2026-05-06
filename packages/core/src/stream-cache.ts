@@ -14,6 +14,7 @@ interface CachedStream {
   chatId: string;
   streamId: string;
   cache: CacheableStream<string>;
+  abortController?: AbortController;
   createdAt: number;
   lastAccessedAt: number;
 }
@@ -68,16 +69,19 @@ export class StreamCache {
     streamId,
     chatId,
     stream,
+    abortController,
   }: {
     streamId: string;
     chatId: string;
     stream: ReadableStream<string>;
+    abortController?: AbortController;
   }) {
     console.log('[StreamCache] storeStream', streamId, chatId);
     this.activeStreams.set(chatId, streamId);
     const entry = {
       chatId,
       streamId,
+      abortController,
       cache: makeCacheableStream({
         source: stream,
         onPush: () => {
@@ -119,6 +123,22 @@ export class StreamCache {
         `[StreamCache] Cleared active stream ${streamId} for chat ${chatId}`,
       );
     }
+  }
+
+  /**
+   * Abort an active stream for a chat (cancels the underlying request)
+   */
+  abortStream(chatId: string): boolean {
+    const streamId = this.activeStreams.get(chatId);
+    if (!streamId) return false;
+
+    const entry = this.cache.get(streamId);
+    if (!entry?.abortController) return false;
+
+    console.log(`[StreamCache] Aborting stream ${streamId} for chat ${chatId}`);
+    entry.abortController.abort('SERVER_CANCEL');
+    this.clearActiveStream(chatId);
+    return true;
   }
 
   clearStream(streamId: string): void {

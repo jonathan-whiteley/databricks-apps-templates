@@ -25,7 +25,7 @@ import {
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, ArrowUpIcon, StopCircleIcon } from 'lucide-react';
+import { ArrowDown, ArrowUpIcon } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@chat-template/core';
@@ -37,11 +37,10 @@ function PureMultimodalInput({
   input,
   setInput,
   status,
-  stop,
   attachments,
   setAttachments,
   messages,
-  setMessages,
+  setMessages: _setMessages,
   sendMessage,
   selectedVisibilityType,
 }: {
@@ -49,7 +48,6 @@ function PureMultimodalInput({
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>['status'];
-  stop: () => void;
   attachments: Array<Attachment>;
   setAttachments: Dispatch<SetStateAction<Array<Attachment>>>;
   messages: Array<UIMessage>;
@@ -315,18 +313,19 @@ function PureMultimodalInput({
         <PromptInputToolbar className="!border-top-0 border-t-0! p-0 shadow-none dark:border-0 dark:border-transparent!">
           <PromptInputTools className="gap-0 sm:gap-0.5" />
 
-          {status === 'submitted' || status === 'streaming' ? (
-            <StopButton stop={stop} setMessages={setMessages} />
-          ) : (
-            <PromptInputSubmit
-              data-testid="send-button"
-              status={status}
-              disabled={!input.trim() || uploadQueue.length > 0}
-              className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-            >
-              <ArrowUpIcon size={14} />
-            </PromptInputSubmit>
-          )}
+          <PromptInputSubmit
+            data-testid="send-button"
+            status={status}
+            disabled={
+              !input.trim() ||
+              uploadQueue.length > 0 ||
+              status === 'submitted' ||
+              status === 'streaming'
+            }
+            className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+          >
+            <ArrowUpIcon size={14} />
+          </PromptInputSubmit>
         </PromptInputToolbar>
       </PromptInput>
     </div>
@@ -346,26 +345,3 @@ export const MultimodalInput = memo(
   },
 );
 
-function PureStopButton({
-  stop,
-  setMessages,
-}: {
-  stop: () => void;
-  setMessages: UseChatHelpers<ChatMessage>['setMessages'];
-}) {
-  return (
-    <Button
-      data-testid="stop-button"
-      className="size-7 rounded-full bg-foreground p-1 text-background transition-colors duration-200 hover:bg-foreground/90 disabled:bg-muted disabled:text-muted-foreground"
-      onClick={(event) => {
-        event.preventDefault();
-        stop();
-        setMessages((messages) => messages);
-      }}
-    >
-      <StopCircleIcon size={14} />
-    </Button>
-  );
-}
-
-const StopButton = memo(PureStopButton);

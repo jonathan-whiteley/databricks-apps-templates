@@ -10,3 +10,5 @@ on_behalf_of_authentication: true
 env:
   - name: DATABRICKS_SERVING_ENDPOINT
     valueFrom: serving-endpoint
+  - name: GENIE_SPACE_ID
+    value: "01f12263f27819df9013b0cbc43f5c3e"
