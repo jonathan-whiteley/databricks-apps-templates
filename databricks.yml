@@ -22,6 +22,8 @@ resources:
       source_code_path: .
       user_api_scopes:
         - serving.serving-endpoints
+        - sql
+        - dashboards.genie
       resources:
         - name: serving-endpoint
           description: "MAS serving endpoint for the AI agent"

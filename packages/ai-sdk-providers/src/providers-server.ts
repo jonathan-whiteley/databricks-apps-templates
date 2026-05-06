@@ -3,7 +3,6 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { getHostUrl } from '@chat-template/utils';
 // Import auth module directly
 import {
-  getDatabricksToken,
   getDatabricksTokenForRequest,
   getAuthMethod,
   getDatabricksUserIdentity,
@@ -182,7 +181,7 @@ async function getOrCreateDatabricksProvider(
     return oauthProviderCache;
   }
 
-  console.log('Creating new OAuth provider' + (session?.accessToken ? ' (OBO)' : ''));
+  console.log(`Creating new OAuth provider${session?.accessToken ? ' (OBO)' : ''}`);
   // Ensure we have a valid token before creating provider
   await getProviderToken(session);
   const hostname = await getWorkspaceHostname();
@@ -322,7 +321,7 @@ export class OAuthAwareProvider implements SmartProvider {
       const servingEndpoint = process.env.DATABRICKS_SERVING_ENDPOINT;
       const endpointDetails = await getEndpointDetails(servingEndpoint, session);
 
-      console.log(`Creating fresh model for ${id}` + (session?.accessToken ? ' (OBO)' : ''));
+      console.log(`Creating fresh model for ${id}${session?.accessToken ? ' (OBO)' : ''}`);
       switch (endpointDetails.task) {
         case 'agent/v2/chat':
           return provider.chatAgent(servingEndpoint);

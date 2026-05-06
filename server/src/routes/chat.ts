@@ -205,11 +205,15 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
     let finalUsage: LanguageModelUsage | undefined;
     const streamId = generateUUID();
 
+    // Create abort controller for server-side cancellation
+    const abortController = new AbortController();
+
     // Pass session to provider for OBO authentication
     const model = await myProvider.languageModel(selectedChatModel, session);
     const result = streamText({
       model,
       messages: convertToModelMessages(uiMessages),
+      abortSignal: abortController.signal,
       onFinish: ({ usage }) => {
         finalUsage = usage;
       },
@@ -284,6 +288,7 @@ chatRouter.post('/', requireAuth, async (req: Request, res: Response) => {
           streamId,
           chatId: id,
           stream,
+          abortController,
         });
       },
     });
@@ -441,6 +446,29 @@ chatRouter.patch(
       console.error('Error updating visibility:', error);
       res.status(500).json({ error: 'Failed to update visibility' });
     }
+  },
+);
+
+/**
+ * POST /api/chat/:id/cancel - Cancel an active stream
+ */
+chatRouter.post(
+  '/:id/cancel',
+  [requireAuth],
+  async (req: Request, res: Response) => {
+    const { id: chatId } = req.params;
+
+    console.log(`[Chat Cancel] Cancel request for chat ${chatId}`);
+
+    const aborted = streamCache.abortStream(chatId);
+
+    if (aborted) {
+      console.log(`[Chat Cancel] Successfully cancelled stream for chat ${chatId}`);
+      return res.status(200).json({ cancelled: true });
+    }
+
+    console.log(`[Chat Cancel] No active stream to cancel for chat ${chatId}`);
+    return res.status(200).json({ cancelled: false });
   },
 );
 

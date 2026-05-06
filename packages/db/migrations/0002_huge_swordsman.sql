@@ -1,0 +1,1 @@
+DROP TABLE "ai_chatbot"."User" CASCADE;
