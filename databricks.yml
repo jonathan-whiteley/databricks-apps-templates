@@ -19,6 +19,20 @@ variables:
     default: "simulator_issue_docs"
 
 resources:
+  schemas:
+    flightsafety_schema:
+      catalog_name: ${var.catalog_name}
+      name: ${var.schema_name}
+      comment: "FlightSafety simulator demo data"
+
+  volumes:
+    flightsafety_pdfs:
+      catalog_name: ${var.catalog_name}
+      schema_name: ${resources.schemas.flightsafety_schema.name}
+      name: ${var.volume_name}
+      volume_type: MANAGED
+      comment: "Simulator discrepancy PDF documents for KA endpoint"
+
   database_instances:
     chatbot_lakebase:
       name: ${var.database_instance_name}
