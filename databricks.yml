@@ -8,6 +8,15 @@ variables:
   database_instance_name:
     description: "Base name of the Lakebase database instance"
     default: "flightsafety-lakebase"
+  catalog_name:
+    description: "Unity Catalog name for FlightSafety demo data"
+    default: "flightsafety_demo"
+  schema_name:
+    description: "Schema name within the catalog"
+    default: "core"
+  volume_name:
+    description: "Volume name for simulator discrepancy PDFs"
+    default: "simulator_issue_docs"
 
 resources:
   database_instances:
