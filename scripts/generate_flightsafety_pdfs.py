@@ -15,7 +15,10 @@ from databricks.sdk import WorkspaceClient
 # Constants
 # ---------------------------------------------------------------------------
 
-VOLUME_PATH = "/Volumes/jdub_demo/flightsafety/simulator_issue_docs"
+CATALOG = os.environ.get("FLIGHTSAFETY_CATALOG", "flightsafety_demo")
+SCHEMA = os.environ.get("FLIGHTSAFETY_SCHEMA", "core")
+VOLUME = os.environ.get("FLIGHTSAFETY_VOLUME", "simulator_issue_docs")
+VOLUME_PATH = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME}"
 
 # ---------------------------------------------------------------------------
 # Discrepancy data

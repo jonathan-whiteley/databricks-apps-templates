@@ -1,14 +1,20 @@
 """Generate fact table data for FlightSafety demo and insert via Databricks SQL.
 
 Run locally: python scripts/generate_flightsafety_data.py
-Requires: databricks-sdk (uses DEFAULT profile)
+Or as bundle job: see databricks.yml resources.jobs.bootstrap_data
+Requires: databricks-sdk
 """
 
+import os
 import random
 from datetime import date, timedelta
 from databricks.sdk import WorkspaceClient
 
-w = WorkspaceClient(profile="DEFAULT")
+CATALOG = os.environ.get("FLIGHTSAFETY_CATALOG", "flightsafety_demo")
+SCHEMA = os.environ.get("FLIGHTSAFETY_SCHEMA", "core")
+PROFILE = os.environ.get("DATABRICKS_CONFIG_PROFILE", "DEFAULT")
+
+w = WorkspaceClient(profile=PROFILE)
 
 random.seed(42)
 
@@ -115,7 +121,7 @@ for i in range(0, len(sessions), batch_size):
         f"TIMESTAMP '{s[5]}', {s[6]}, '{escape(s[7])}', '{s[8]}', '{s[9]}')"
         for s in batch
     )
-    sql = f"INSERT INTO jdub_demo.flightsafety.fact_simulator_sessions VALUES\n{values}"
+    sql = f"INSERT INTO {CATALOG}.{SCHEMA}.fact_simulator_sessions VALUES\n{values}"
     result = w.statement_execution.execute_statement(
         warehouse_id=wh_id,
         statement=sql,
@@ -154,7 +160,7 @@ for i in range(0, len(capacity), batch_size):
         f"('{c[0]}', DATE '{c[1]}', {c[2]}, {c[3]}, {c[4]}, {c[5]})"
         for c in batch
     )
-    sql = f"INSERT INTO jdub_demo.flightsafety.fact_simulator_capacity VALUES\n{values}"
+    sql = f"INSERT INTO {CATALOG}.{SCHEMA}.fact_simulator_capacity VALUES\n{values}"
     result = w.statement_execution.execute_statement(
         warehouse_id=wh_id,
         statement=sql,
