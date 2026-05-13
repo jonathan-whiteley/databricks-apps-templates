@@ -33,6 +33,36 @@ resources:
       volume_type: MANAGED
       comment: "Simulator discrepancy PDF documents for KA endpoint"
 
+  jobs:
+    bootstrap_data:
+      name: flightsafety-bootstrap-data
+      description: "One-shot job: create tables and generate PDFs into volume"
+      tasks:
+        - task_key: generate_fact_tables
+          spark_python_task:
+            python_file: scripts/generate_flightsafety_data.py
+          environment_key: bootstrap_env
+        - task_key: generate_pdfs
+          depends_on:
+            - task_key: generate_fact_tables
+          spark_python_task:
+            python_file: scripts/generate_flightsafety_pdfs.py
+          environment_key: bootstrap_env
+      environments:
+        - environment_key: bootstrap_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk
+              - fpdf2
+      parameters:
+        - name: FLIGHTSAFETY_CATALOG
+          default: ${var.catalog_name}
+        - name: FLIGHTSAFETY_SCHEMA
+          default: ${var.schema_name}
+        - name: FLIGHTSAFETY_VOLUME
+          default: ${var.volume_name}
+
   database_instances:
     chatbot_lakebase:
       name: ${var.database_instance_name}
